@@ -231,14 +231,14 @@ function App() {
                   <Button onClick={handleDeleteTodo(todo.id)}>Delete</Button>
 
                   <Button
-  onClick={handleUpdateTodo(todo.id)}
-  sx={{
-    bgcolor: todo.completed ? "green" : "inherit",
-    color: todo.completed ? "#fff" : "#000",
-  }}
->
-  {todo.completed ? "Selesai" : "Belum"}
-</Button>
+                    onClick={handleUpdateTodo(todo.id)}
+                    sx={{
+                      bgcolor: todo.completed ? "green" : "inherit",
+                      color: todo.completed ? "#fff" : "#000",
+                    }}
+                  >
+                    {todo.completed ? "Selesai" : "Belum"}
+                  </Button>
 
                   <Button
                     onClick={() => {
