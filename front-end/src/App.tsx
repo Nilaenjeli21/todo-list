@@ -8,7 +8,7 @@ import List from "@mui/material/List";
 import axios from "axios";
 import "./App.css";
 
-interface Task {
+interface List {
   id: number;
   title: string;
   notes?: string;
@@ -18,7 +18,7 @@ interface Task {
 }
 
 function App() {
-  const [todos, setTodos] = useState<Task[]>([]);
+  const [todos, setTodos] = useState<List[]>([]);
   const [state, setState] = useState<boolean>(false);
   const [newTodoTitle, setNewTodoTitle] = useState<string>("");
   const [newTodoNotes, setNewTodoNotes] = useState<string>("");
@@ -39,7 +39,7 @@ function App() {
 
   const fetchTodos = () => {
     axios
-      .get<Task[]>("http://localhost:3000/tasks", axiosConfig)
+      .get<List[]>("http://localhost:3000/lists", axiosConfig)
       .then((response) => {
         if (Array.isArray(response.data)) {
           setTodos(response.data);
@@ -56,36 +56,35 @@ function App() {
     if (!newTodoTitle) {
       return;
     }
-  
+
     try {
       const data = {
         title: newTodoTitle,
         notes: newTodoNotes,
       };
-  
+
       const response = await axios.post(
-        "http://localhost:3000/tasks",
+        "http://localhost:3000/lists",
         data,
         axiosConfig
       );
-  
+
       console.log("New todo added successfully:", response.data);
-  
+
       // Menambahkan tugas baru ke daftar yang sudah ada
       setTodos([...todos, response.data]);
-  
+
       setNewTodoTitle("");
       setNewTodoNotes("");
     } catch (error) {
       console.error("Error adding new todo:", error);
     }
   };
-  
 
   const handleDeleteTodo = (id: number) => () => {
     console.log(id);
     axios
-      .delete(`http://localhost:3000/tasks/${id}`)
+      .delete(`http://localhost:3000/lists/${id}`)
       .then(() => {
         setTodos(todos.filter((todo) => todo.id !== id));
       })
@@ -107,7 +106,7 @@ function App() {
       return;
     }
     axios
-      .put(`http://localhost:3000/tasks/${id}`, { title: newTodoTitle })
+      .put(`http://localhost:3000/lists/${id}`, { title: newTodoTitle })
       .then(() => {
         fetchTodos();
         const updatedTodos = todos.map((todo) => {
@@ -139,9 +138,8 @@ function App() {
       return;
     }
     axios
-      .put(`http://localhost:3000/tasks/${id}`, { notes: newTodoNotes })
+      .put(`http://localhost:3000/lists/${id}`, { notes: newTodoNotes })
       .then(() => {
-        
         const updatedTodos = todos.map((todo) => {
           if (todo.id === id) {
             return { ...todo, notes: newTodoNotes };
@@ -160,7 +158,7 @@ function App() {
 
   const handleUpdateTodo = (id: number) => () => {
     axios
-      .put(`http://localhost:3000/tasks/${id}`)
+      .put(`http://localhost:3000/lists/${id}`)
       .then(() => {
         fetchTodos();
       })
@@ -221,7 +219,7 @@ function App() {
           <List
             sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}
           >
-            {todos.map((todo: Task) => (
+            {todos.map((todo: List) => (
               <Card key={todo.id} sx={{ my: 1 }}>
                 <CardContent>
                   <Typography variant="h6" component="div">
@@ -231,10 +229,13 @@ function App() {
                     {todo.notes}
                   </Typography>
                   <Button onClick={handleDeleteTodo(todo.id)}>Delete</Button>
-                  
+
                   <Button
   onClick={handleUpdateTodo(todo.id)}
-  sx={{ bgcolor: todo.completed ? 'green' : 'inherit', color: todo.completed ? '#fff' : 'inherit' }}
+  sx={{
+    bgcolor: todo.completed ? "green" : "inherit",
+    color: todo.completed ? "#fff" : "#000",
+  }}
 >
   {todo.completed ? "Selesai" : "Belum"}
 </Button>
