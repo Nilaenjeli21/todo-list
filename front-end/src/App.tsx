@@ -9,8 +9,8 @@ import axios from "axios";
 import "./App.css";
 
 interface Task {
-  id?: number;
-  title?: string;
+  id: number;
+  title: string;
   notes?: string;
   completed?: boolean;
   createdAt?: Date;
@@ -19,10 +19,19 @@ interface Task {
 
 function App() {
   const [todos, setTodos] = useState<Task[]>([]);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [state, setState] = useState<boolean>(false);
   const [newTodoTitle, setNewTodoTitle] = useState<string>("");
   const [newTodoNotes, setNewTodoNotes] = useState<string>("");
+  const [clickedId, setClickId] = useState<number>(0);
+  console.log(newTodoTitle);
 
+  const axiosConfig = {
+    withCredentials: false,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json",
+    },
+  };
 
   useEffect(() => {
     fetchTodos();
@@ -30,7 +39,7 @@ function App() {
 
   const fetchTodos = () => {
     axios
-      .get<Task[]>("http://localhost:5173/get")
+      .get<Task[]>("http://localhost:3000/tasks", axiosConfig)
       .then((response) => {
         if (Array.isArray(response.data)) {
           setTodos(response.data);
@@ -44,41 +53,41 @@ function App() {
   };
 
   const handleAddTodo = async () => {
-    // Periksa apakah judul tugas baru tidak kosong
     if (!newTodoTitle) {
       return;
     }
   
     try {
-      // Buat objek data baru untuk tugas
       const data = {
         title: newTodoTitle,
         notes: newTodoNotes,
       };
   
-      // Kirim permintaan POST ke server menggunakan Axios
-      const response = await axios.post('http://localhost:3000/tasks', data, {
-        withCredentials: true
-      });
+      const response = await axios.post(
+        "http://localhost:3000/tasks",
+        data,
+        axiosConfig
+      );
   
-      // Log respon dari server dan perbarui tugas
       console.log("New todo added successfully:", response.data);
-      fetchTodos();
   
-      // Bersihkan input setelah tugas ditambahkan
+      // Menambahkan tugas baru ke daftar yang sudah ada
+      setTodos([...todos, response.data]);
+  
       setNewTodoTitle("");
       setNewTodoNotes("");
     } catch (error) {
-      // Tangkap dan tampilkan pesan error jika terjadi error saat menambahkan tugas baru
-      console.error("Error adding new todo:");
+      console.error("Error adding new todo:", error);
     }
   };
+  
 
   const handleDeleteTodo = (id: number) => () => {
+    console.log(id);
     axios
-      .delete(`http://localhost:3000/delete/${id}`)
+      .delete(`http://localhost:3000/tasks/${id}`)
       .then(() => {
-        setTodos((todos) => todos.filter((todo) => todo.id !== id));
+        setTodos(todos.filter((todo) => todo.id !== id));
       })
       .catch((error) => {
         console.error("Error deleting todo:", error);
@@ -86,47 +95,74 @@ function App() {
   };
 
   const handleUpdateTitle = (id: number) => () => {
-    setIsEditing(true);
-    const updatedTitle = prompt(
-      "Enter new title:",
-      todos.find((todo) => todo.id === id)?.title
-    );
-    if (updatedTitle) {
-      axios
-        .put(`http://localhost:3000/put/${id}`, { title: updatedTitle })
-        .then(() => {
-          fetchTodos();
-        })
-        .catch((error) => {
-          console.error("Error updating title:", error);
-        });
+    setState(!state);
+    if (!newTodoTitle) {
+      setNewTodoTitle(todos.find((todo) => todo.id === id)?.title || "");
+      setClickId(id);
+      return;
     }
-    setIsEditing(false);
+    if (id !== clickedId) {
+      setNewTodoTitle("");
+      setState(!state);
+      return;
+    }
+    axios
+      .put(`http://localhost:3000/tasks/${id}`, { title: newTodoTitle })
+      .then(() => {
+        fetchTodos();
+        const updatedTodos = todos.map((todo) => {
+          if (todo.id === id) {
+            return { ...todo, title: newTodoTitle };
+          } else {
+            return todo;
+          }
+        });
+        setTodos(updatedTodos);
+        setNewTodoTitle("");
+        setState(!state);
+      })
+      .catch((error) => {
+        console.error("Error updating title:", error);
+      });
   };
 
   const handleUpdateNotes = (id: number) => () => {
-    const updatedNotes = prompt(
-      "Enter new notes:",
-      todos.find((todo) => todo.id === id)?.notes
-    );
-    if (updatedNotes) {
-      axios
-        .put(`http://localhost:3000/put/${id}`, { notes: updatedNotes })
-        .then(() => {
-          fetchTodos();
-        })
-        .catch((error) => {
-          console.error("Error updating notes:", error);
-        });
+    setState(!state);
+    if (!newTodoNotes) {
+      setNewTodoNotes(todos.find((todo) => todo.id === id)?.notes || "");
+      setClickId(id);
+      return;
     }
+    if (id !== clickedId) {
+      setNewTodoNotes("");
+      setState(!state);
+      return;
+    }
+    axios
+      .put(`http://localhost:3000/tasks/${id}`, { notes: newTodoNotes })
+      .then(() => {
+        
+        const updatedTodos = todos.map((todo) => {
+          if (todo.id === id) {
+            return { ...todo, notes: newTodoNotes };
+          } else {
+            return todo;
+          }
+        });
+        setTodos(updatedTodos);
+        setNewTodoNotes("");
+        setState(!state);
+      })
+      .catch((error) => {
+        console.error("Error updating notes:", error);
+      });
   };
 
   const handleUpdateTodo = (id: number) => () => {
-    const updatedCompleted = !todos.find((todo) => todo.id === id)?.completed;
     axios
-      .put(`http://localhost:3000/tasks/${id}`, { completed: updatedCompleted })
+      .put(`http://localhost:3000/tasks/${id}`)
       .then(() => {
-        fetchTodos(); // Ambil ulang daftar tugas setelah pembaruan
+        fetchTodos();
       })
       .catch((error) => {
         console.error("Error updating todo:", error);
@@ -135,7 +171,7 @@ function App() {
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      if (isEditing) {
+      if (state) {
       } else {
         handleAddTodo();
       }
@@ -143,70 +179,89 @@ function App() {
   };
 
   return (
-    <Card
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 500,
-        padding: 3,
-      }}
-    >
-      <CardContent>
-        <Typography sx={{ fontSize: 42 }} color="text.secondary">
-          Todo List
-        </Typography>
-        <TextField
-          id="outlined-helperText"
-          sx={{ mb: 2 }}
-          label="Title"
-          fullWidth
-          value={newTodoTitle}
-          onKeyDown={handleKeyDown}
-          onChange={(e) => setNewTodoTitle(e.target.value)}
-        />
-        <TextField
-          id="outlined-helperText"
-          sx={{ mb: 2 }}
-          label="Notes"
-          fullWidth
-          value={newTodoNotes}
-          onKeyDown={handleKeyDown}
-          onChange={(e) => setNewTodoNotes(e.target.value)}
-        />
-        <Button variant="contained" fullWidth onClick={() => handleAddTodo()}>
-          Save
-        </Button>
+    <div>
+      <Card
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 500,
+          padding: 3,
+          margin: "auto",
+          marginTop: 50,
+        }}
+      >
+        <CardContent>
+          <Typography sx={{ fontSize: 42 }} color="text.secondary">
+            Todo List
+          </Typography>
+          <TextField
+            id="outlined-helperText"
+            sx={{ mb: 2 }}
+            label="Title"
+            fullWidth
+            value={newTodoTitle}
+            onKeyDown={handleKeyDown}
+            onChange={(e) => setNewTodoTitle(e.target.value)}
+          />
+          <TextField
+            id="outlined-helperText"
+            sx={{ mb: 2 }}
+            label="Notes"
+            fullWidth
+            value={newTodoNotes}
+            onKeyDown={handleKeyDown}
+            onChange={(e) => setNewTodoNotes(e.target.value)}
+          />
+          <Button variant="contained" fullWidth onClick={handleAddTodo}>
+            Add
+          </Button>
 
-        <List sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}>
-  {todos.map((todo: Task) => (
-    <Card key={todo.id} sx={{ my: 1 }}>
-      <CardContent>
-        <Typography variant="h6" component="div">
-          {todo.title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {todo.notes}
-        </Typography>
-        <Button onClick={() => todo.id !== undefined && handleDeleteTodo(todo.id)}>
-          Delete
-        </Button>
-        <Button onClick={() =>todo.id !== undefined && handleUpdateTitle(todo.id)}>
-          Edit Title
-        </Button>
-        <Button onClick={() => todo.id !== undefined && handleUpdateNotes(todo.id)}>
-          Edit Notes
-        </Button>
-        <Button onClick={() => todo.id !== undefined && handleUpdateTodo(todo.id)}>
-          {todo.completed ? "Mark Incomplete" : "Mark Complete"}
-        </Button>
-      </CardContent>
-    </Card>
-  ))}
-</List>
+          <List
+            sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}
+          >
+            {todos.map((todo: Task) => (
+              <Card key={todo.id} sx={{ my: 1 }}>
+                <CardContent>
+                  <Typography variant="h6" component="div">
+                    {todo.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {todo.notes}
+                  </Typography>
+                  <Button onClick={handleDeleteTodo(todo.id)}>Delete</Button>
+                  
+                  <Button
+  onClick={handleUpdateTodo(todo.id)}
+  sx={{ bgcolor: todo.completed ? 'green' : 'inherit', color: todo.completed ? '#fff' : 'inherit' }}
+>
+  {todo.completed ? "Selesai" : "Belum"}
+</Button>
 
-      </CardContent>
-    </Card>
+                  <Button
+                    onClick={() => {
+                      setClickId(todo.id); // Perbarui clickedId sebelum memanggil handleUpdateTitle
+                      handleUpdateTitle(todo.id)(); // Panggil fungsi handleUpdateTitle setelah memperbarui clickedId
+                    }}
+                  >
+                    Update Title
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setClickId(todo.id); // Perbarui clickedId sebelum memanggil handleUpdateNotes
+                      handleUpdateNotes(todo.id)(); // Panggil fungsi handleUpdateNotes setelah memperbarui clickedId
+                    }}
+                  >
+                    Update Notes
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </List>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
