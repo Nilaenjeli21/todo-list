@@ -1,15 +1,20 @@
 import { PrismaClient } from "@prisma/client";
-const  cors= require ('cors');
+const  cors = require('cors');
+
 import express from "express";
+import createError from "http-errors"
 
 const prisma = new PrismaClient();
 const app = express();
 
 const corsOptions = {
-    origin: ["http://localhost:5173"]
+    origin: "http://localhost:5173",
+  
 };
 
-app.use(cors(corsOptions));
+
+app.use(cors());
+// app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -20,6 +25,8 @@ app.get(`/tasks`, async (req, res) => {
 });
 
 app.post(`/tasks`, async (req, res) => {
+ 
+    console.log('masuk sini');
     const { title, notes } = req.body;
     try {
         const result = await prisma.task.create({
